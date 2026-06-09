@@ -45,8 +45,10 @@ class PassportProvider extends ChangeNotifier {
     _entries = _storage.loadPassportEntries();
   }
 
-  List<PassportEntry> get entries => List.unmodifiable(_entries)
-    ..sort((a, b) => b.checkedInAt.compareTo(a.checkedInAt));
+  List<PassportEntry> get entries => List.unmodifiable(
+    List<PassportEntry>.from(_entries)
+      ..sort((a, b) => b.checkedInAt.compareTo(a.checkedInAt)),
+  );
 
   int get totalAttended => _entries.length;
 
