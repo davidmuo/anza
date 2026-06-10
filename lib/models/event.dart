@@ -23,6 +23,21 @@ extension EventCategoryLabel on EventCategory {
   }
 }
 
+/// ALU's two undergraduate campuses. Drives the campus filter on the feed
+/// so students only see what's relevant to where they study.
+enum Campus { kigali, mauritius }
+
+extension CampusLabel on Campus {
+  String get label {
+    switch (this) {
+      case Campus.kigali:
+        return 'Kigali';
+      case Campus.mauritius:
+        return 'Mauritius';
+    }
+  }
+}
+
 class Event {
   final String id;
   final String title;
@@ -37,6 +52,7 @@ class Event {
 
   final DateTime dateTime;
   final String location;
+  final Campus campus;
 
   /// Placeholder banner color (we don't ship real images — keeps the app
   /// fully offline and lightweight).
@@ -59,6 +75,7 @@ class Event {
     this.posterVerifiedOrg,
     required this.dateTime,
     required this.location,
+    required this.campus,
     required this.imageColor,
     required this.checkInCode,
     this.rsvpUserIds = const [],
@@ -92,6 +109,7 @@ class Event {
       posterVerifiedOrg: posterVerifiedOrg,
       dateTime: dateTime,
       location: location,
+      campus: campus,
       imageColor: imageColor,
       checkInCode: checkInCode,
       rsvpUserIds: rsvpUserIds ?? this.rsvpUserIds,

@@ -70,7 +70,9 @@ class _AuthScreenState extends State<AuthScreen> {
         final user = auth.currentUser!;
         await context.read<StorageService>().setOnboardingComplete(true);
         if (!mounted) return;
-        context.read<EventsProvider>().hydrateRsvpsForUser(user.id);
+        final eventsProvider = context.read<EventsProvider>();
+        eventsProvider.hydrateRsvpsForUser(user.id);
+        eventsProvider.loadSavedEvents();
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const RootScreen()),

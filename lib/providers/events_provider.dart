@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/seed_data.dart';
 import '../models/event.dart';
+import '../services/saved_events_database.dart';
 import '../services/storage_service.dart';
 
 /// Holds the event catalogue plus feed-filtering state, and owns RSVP logic.
@@ -12,34 +13,72 @@ import '../services/storage_service.dart';
 /// [hydrateRsvpsForUser].
 class EventsProvider extends ChangeNotifier {
   final StorageService _storage;
+  final SavedEventsDatabase _savedEventsDb = SavedEventsDatabase();
 
   List<Event> _events = SeedData.events();
   EventCategory? _categoryFilter;
+  Campus? _campusFilter;
   String _searchQuery = '';
+  Set<String> _savedEventIds = {};
 
   EventsProvider(this._storage);
 
   List<Event> get events => List.unmodifiable(_events);
   EventCategory? get categoryFilter => _categoryFilter;
+  Campus? get campusFilter => _campusFilter;
   String get searchQuery => _searchQuery;
 
-  /// Events matching both the selected category chip and the search field.
-  /// Recomputed on read so the feed always reflects the latest filter state.
+  /// Saved-for-later events, most recently saved first.
+  List<Event> get savedEvents => _events.where((e) => _savedEventIds.contains(e.id)).toList();
+
+  bool isSaved(String eventId) => _savedEventIds.contains(eventId);
+
+  /// Loads previously saved event ids from the on-device SQLite database.
+  /// Call once after sign-in, alongside [hydrateRsvpsForUser].
+  Future<void> loadSavedEvents() async {
+    _savedEventIds = await _savedEventsDb.loadSavedEventIds();
+    notifyListeners();
+  }
+
+  /// Toggles whether [eventId] is bookmarked, persisting the change to
+  /// SQLite. Returns true if the event is now saved.
+  Future<bool> toggleSaved(String eventId) async {
+    final isCurrentlySaved = _savedEventIds.contains(eventId);
+    if (isCurrentlySaved) {
+      _savedEventIds = {..._savedEventIds}..remove(eventId);
+      await _savedEventsDb.unsave(eventId);
+    } else {
+      _savedEventIds = {..._savedEventIds, eventId};
+      await _savedEventsDb.save(eventId);
+    }
+    notifyListeners();
+    return !isCurrentlySaved;
+  }
+
+  /// Events matching the selected category chip, campus chip, and search
+  /// field. Recomputed on read so the feed always reflects the latest
+  /// filter state.
   List<Event> get filteredEvents {
     return _events.where((event) {
       final matchesCategory = _categoryFilter == null || event.category == _categoryFilter;
+      final matchesCampus = _campusFilter == null || event.campus == _campusFilter;
       final query = _searchQuery.trim().toLowerCase();
       final matchesSearch = query.isEmpty ||
           event.title.toLowerCase().contains(query) ||
           event.location.toLowerCase().contains(query) ||
           event.posterName.toLowerCase().contains(query);
-      return matchesCategory && matchesSearch;
+      return matchesCategory && matchesCampus && matchesSearch;
     }).toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
   }
 
   void setCategoryFilter(EventCategory? category) {
     _categoryFilter = category;
+    notifyListeners();
+  }
+
+  void setCampusFilter(Campus? campus) {
+    _campusFilter = campus;
     notifyListeners();
   }
 
@@ -50,6 +89,7 @@ class EventsProvider extends ChangeNotifier {
 
   void clearFilters() {
     _categoryFilter = null;
+    _campusFilter = null;
     _searchQuery = '';
     notifyListeners();
   }

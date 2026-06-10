@@ -14,6 +14,7 @@ import '../../widgets/profile_stat_tile.dart';
 import '../../widgets/user_avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../saved/saved_events_screen.dart';
 
 /// Profile + Participation Passport — the app's signature screen.
 ///
@@ -37,6 +38,13 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
+          IconButton(
+            tooltip: 'Saved events',
+            icon: const Icon(Icons.bookmark_border_rounded),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SavedEventsScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout_rounded),

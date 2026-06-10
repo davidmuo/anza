@@ -7,6 +7,7 @@ import '../../providers/events_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/campus_chip.dart';
 import '../../widgets/category_chip.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/event_card.dart';
@@ -122,13 +123,41 @@ class _FeedScreenState extends State<FeedScreen> {
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              children: [
+                CampusChip(
+                  label: 'All campuses',
+                  selected: eventsProvider.campusFilter == null,
+                  onTap: () => eventsProvider.setCampusFilter(null),
+                ),
+                const SizedBox(width: 8),
+                ...Campus.values.map((campus) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: CampusChip(
+                      label: '${campus.label} Campus',
+                      selected: eventsProvider.campusFilter == campus,
+                      onTap: () => eventsProvider.setCampusFilter(
+                        eventsProvider.campusFilter == campus ? null : campus,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           Expanded(
             child: filteredEvents.isEmpty
                 ? const EmptyState(
                     icon: Icons.event_busy_outlined,
                     title: 'No events match',
-                    message: 'Try a different search term or clear the category filter.',
+                    message: 'Try a different search term, or clear the category/campus filters.',
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(

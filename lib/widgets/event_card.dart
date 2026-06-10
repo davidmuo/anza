@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../models/event.dart';
+import '../providers/events_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'verified_badge.dart';
@@ -20,6 +22,8 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateLabel = DateFormat('EEE, MMM d • h:mm a').format(event.dateTime);
+    final eventsProvider = context.watch<EventsProvider>();
+    final isSaved = eventsProvider.isSaved(event.id);
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
@@ -39,21 +43,46 @@ class EventCard extends StatelessWidget {
               height: 110,
               width: double.infinity,
               color: event.imageColor,
-              alignment: Alignment.bottomLeft,
               padding: const EdgeInsets.all(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  event.category.label,
-                  style: AppTextStyles.caption.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+              child: Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        event.category.label,
+                        style: AppTextStyles.caption.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () => eventsProvider.toggleSaved(event.id),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.28),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(

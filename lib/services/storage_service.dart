@@ -16,6 +16,7 @@ class StorageService {
   static const _keyRsvpIds = 'anza.rsvpEventIds';
   static const _keyPassportEntries = 'anza.passportEntries';
   static const _keyOnboardingComplete = 'anza.onboardingComplete';
+  static const _keyJoinedCommunityIds = 'anza.joinedCommunityIds';
 
   final SharedPreferences _prefs;
 
@@ -83,4 +84,16 @@ class StorageService {
   }
 
   bool get hasCompletedOnboarding => _prefs.getBool(_keyOnboardingComplete) ?? false;
+
+  // ---------------------------------------------------------------------
+  // Joined community ids for the current user
+  // ---------------------------------------------------------------------
+
+  Future<void> saveJoinedCommunityIds(List<String> communityIds) async {
+    await _prefs.setStringList(_keyJoinedCommunityIds, communityIds);
+  }
+
+  List<String> loadJoinedCommunityIds() {
+    return _prefs.getStringList(_keyJoinedCommunityIds) ?? const [];
+  }
 }
