@@ -17,7 +17,7 @@ import '../../widgets/user_avatar.dart';
 import '../chats/chats_list_screen.dart';
 import '../create_post/create_post_screen.dart';
 import '../event_detail/event_detail_screen.dart';
-import '../scan/qr_scan_screen.dart';
+import '../notifications/notifications_screen.dart';
 import 'recommended_events_screen.dart';
 
 /// Home tab: search field, category filter chips, and a live-filtered list
@@ -70,11 +70,11 @@ class _FeedScreenState extends State<FeedScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.qr_code_scanner_rounded),
-              tooltip: 'Scan QR code',
+              icon: const Icon(Icons.notifications_outlined),
+              tooltip: 'Notifications',
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const QrScanScreen()),
+                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                 );
               },
             ),
@@ -315,7 +315,11 @@ class _RecommendedCard extends StatelessWidget {
             SizedBox(
               height: 84,
               width: double.infinity,
-              child: PhotoBanner(imageUrl: event.imageUrl, color: event.imageColor),
+              child: PhotoBanner(
+                imageUrl: event.imageUrl,
+                color: event.imageColor,
+                imagePath: event.imagePath,
+              ),
             ),
             Expanded(
               child: Padding(

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/event.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/communities_provider.dart';
 import '../../providers/passport_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
@@ -29,6 +30,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final passport = context.watch<PassportProvider>();
+    final communitiesProvider = context.watch<CommunitiesProvider>();
     final user = auth.currentUser!;
     final badges = passport.badges;
     final entries = passport.entries;
@@ -126,9 +128,9 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               ProfileStatTile(
-                value: '${passport.attendanceStreak}',
-                label: 'Day streak',
-                icon: Icons.local_fire_department_outlined,
+                value: '${communitiesProvider.myCommunities(user.id).length}',
+                label: 'Communities',
+                icon: Icons.diversity_3_outlined,
               ),
               const SizedBox(width: 12),
               ProfileStatTile(
@@ -148,7 +150,7 @@ class ProfileScreen extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.1,
+            childAspectRatio: 0.95,
             children: badges.map((badge) => BadgeTile(badge: badge)).toList(),
           ),
 

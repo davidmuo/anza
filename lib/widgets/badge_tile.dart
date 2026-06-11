@@ -39,6 +39,8 @@ class BadgeTile extends StatelessWidget {
             style: AppTextStyles.label.copyWith(
               color: badge.earned ? AppColors.ink : AppColors.mutedText,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
