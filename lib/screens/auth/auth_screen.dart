@@ -37,8 +37,9 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isSubmitting = false;
   String? _formError;
 
-  static final List<String> _interestOptions =
-      EventCategory.values.map((c) => c.label).toList();
+  static final List<String> _interestOptions = EventCategory.values
+      .map((c) => c.label)
+      .toList();
 
   @override
   void dispose() {
@@ -80,8 +81,10 @@ class _AuthScreenState extends State<AuthScreen> {
         );
         break;
       case AuthResult.userNotFound:
-        setState(() => _formError =
-            'No account found for that email. Try one of the seeded addresses, or sign up instead.');
+        setState(
+          () => _formError =
+              'No account found for that email. Try one of the seeded addresses, or sign up instead.',
+        );
         break;
       case AuthResult.invalidEmail:
         setState(() => _formError = 'Enter a valid email address.');
@@ -104,7 +107,10 @@ class _AuthScreenState extends State<AuthScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_isSignUp ? 'Create your account' : 'Welcome back', style: AppTextStyles.display),
+                Text(
+                  _isSignUp ? 'Create your account' : 'Welcome back',
+                  style: AppTextStyles.display,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   _isSignUp
@@ -121,7 +127,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     textCapitalization: TextCapitalization.words,
                     validator: (value) {
                       if (!_isSignUp) return null;
-                      if (value == null || value.trim().isEmpty) return 'Enter your name';
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Enter your name';
+                      }
                       return null;
                     },
                   ),
@@ -133,9 +141,13 @@ class _AuthScreenState extends State<AuthScreen> {
                   hint: 'you@alustudent.com',
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Enter your email';
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Enter your email';
+                    }
                     final pattern = RegExp(r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$');
-                    if (!pattern.hasMatch(value.trim())) return 'Enter a valid email address';
+                    if (!pattern.hasMatch(value.trim())) {
+                      return 'Enter a valid email address';
+                    }
                     return null;
                   },
                 ),
@@ -143,8 +155,10 @@ class _AuthScreenState extends State<AuthScreen> {
                   const SizedBox(height: 22),
                   Text('What are you into?', style: AppTextStyles.label),
                   const SizedBox(height: 4),
-                  Text('Pick a few — this tunes what shows up first in your feed.',
-                      style: AppTextStyles.caption),
+                  Text(
+                    'Pick a few — this tunes what shows up first in your feed.',
+                    style: AppTextStyles.caption,
+                  ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -173,11 +187,15 @@ class _AuthScreenState extends State<AuthScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.error.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColors.error.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Text(
                       _formError!,
-                      style: AppTextStyles.caption.copyWith(color: AppColors.error),
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.error,
+                      ),
                     ),
                   ),
                 ],
@@ -213,7 +231,10 @@ class _AuthScreenState extends State<AuthScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Try a seeded account', style: AppTextStyles.label),
+                        Text(
+                          'Try a seeded account',
+                          style: AppTextStyles.label,
+                        ),
                         const SizedBox(height: 6),
                         Text(
                           'amara.chen@alustudent.com (student)\n'
