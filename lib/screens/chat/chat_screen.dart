@@ -61,7 +61,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser!;
-    final messages = context.watch<ChatProvider>().messagesFor(widget.spaceId);
+    final chatProvider = context.watch<ChatProvider>();
+    final messages = chatProvider.messagesFor(widget.spaceId);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -69,21 +70,32 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: messages.isEmpty
-                ? const EmptyState(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    title: 'No messages yet',
-                    message: 'Be the first to say something here.',
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final message = messages[index];
-                      return ChatBubble(message: message, isOwnMessage: message.senderId == user.id);
-                    },
-                  ),
+            child: RefreshIndicator(
+              onRefresh: chatProvider.refresh,
+              color: AppColors.primary,
+              child: messages.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        SizedBox(height: 80),
+                        EmptyState(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          title: 'No messages yet',
+                          message: 'Be the first to say something here.',
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final message = messages[index];
+                        return ChatBubble(message: message, isOwnMessage: message.senderId == user.id);
+                      },
+                    ),
+            ),
           ),
           SafeArea(
             top: false,

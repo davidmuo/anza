@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/seed_data.dart';
 import '../models/event.dart';
+import '../models/user.dart';
 import '../services/saved_events_database.dart';
 import '../services/storage_service.dart';
 
@@ -57,9 +58,11 @@ class EventsProvider extends ChangeNotifier {
 
   /// Events matching the selected category chip, campus chip, and search
   /// field. Recomputed on read so the feed always reflects the latest
-  /// filter state.
+  /// filter state. Only [EventStatus.approved] events are shown — events
+  /// awaiting moderation stay on their poster's "Posted" tab until approved.
   List<Event> get filteredEvents {
     return _events.where((event) {
+      if (event.status != EventStatus.approved) return false;
       final matchesCategory = _categoryFilter == null || event.category == _categoryFilter;
       final matchesCampus = _campusFilter == null || event.campus == _campusFilter;
       final query = _searchQuery.trim().toLowerCase();
@@ -94,6 +97,21 @@ class EventsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Upcoming, approved events that match one of [user]'s interests —
+  /// surfaced as a "Recommended for you" rail on the feed so the app feels
+  /// tailored rather than just chronological. Events stay listed even after
+  /// the user RSVPs, so the rail doesn't reshuffle under them mid-scroll.
+  List<Event> recommendedFor(AppUser user) {
+    final now = DateTime.now();
+    return _events
+        .where((e) =>
+            e.status == EventStatus.approved &&
+            e.dateTime.isAfter(now) &&
+            user.interests.contains(e.category.label))
+        .toList()
+      ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+  }
+
   Event? eventById(String id) {
     try {
       return _events.firstWhere((e) => e.id == id);
@@ -106,6 +124,13 @@ class EventsProvider extends ChangeNotifier {
   List<Event> myRsvps(String userId) {
     return _events.where((e) => e.isRsvpedBy(userId)).toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+  }
+
+  /// Events the given user has posted, most recently created first —
+  /// includes events still [EventStatus.pending] approval so posters can
+  /// track their own submissions.
+  List<Event> myPosts(String userId) {
+    return _events.where((e) => e.posterId == userId).toList();
   }
 
   /// Adds or removes [userId] from an event's RSVP list, persists the
@@ -171,6 +196,13 @@ class EventsProvider extends ChangeNotifier {
   /// Prepends a newly created event to the feed (used by Create Post).
   void addEvent(Event event) {
     _events = [event, ..._events];
+    notifyListeners();
+  }
+
+  /// Simulated refresh for pull-to-refresh — there's no backend to poll, so
+  /// this just gives the spinner something to wait on before redrawing.
+  Future<void> refresh() async {
+    await Future.delayed(const Duration(milliseconds: 700));
     notifyListeners();
   }
 }

@@ -10,6 +10,9 @@ class Message {
   final String text;
   final DateTime timestamp;
 
+  /// Emoji reaction counts, e.g. {'👍': 3, '🎉': 1}.
+  final Map<String, int> reactions;
+
   const Message({
     required this.id,
     required this.spaceId,
@@ -17,7 +20,18 @@ class Message {
     required this.senderName,
     required this.text,
     required this.timestamp,
+    this.reactions = const {},
   });
+
+  Message copyWith({Map<String, int>? reactions}) => Message(
+        id: id,
+        spaceId: spaceId,
+        senderId: senderId,
+        senderName: senderName,
+        text: text,
+        timestamp: timestamp,
+        reactions: reactions ?? this.reactions,
+      );
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -26,6 +40,7 @@ class Message {
         'senderName': senderName,
         'text': text,
         'timestamp': timestamp.toIso8601String(),
+        'reactions': reactions,
       };
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -35,5 +50,9 @@ class Message {
         senderName: json['senderName'] as String,
         text: json['text'] as String,
         timestamp: DateTime.parse(json['timestamp'] as String),
+        reactions: (json['reactions'] as Map?)?.map(
+              (k, v) => MapEntry(k as String, v as int),
+            ) ??
+            const {},
       );
 }
