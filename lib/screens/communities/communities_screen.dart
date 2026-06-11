@@ -1,31 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../data/seed_data.dart';
 import '../../models/community.dart';
+import '../../providers/communities_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 import '../chat/chat_screen.dart';
 
 /// Lists topic-based community spaces (clubs, teams, interest groups).
-/// Tapping one opens its chat — communities and events share the same
-/// [ChatScreen] / [ChatProvider] since both are just "spaces" with messages.
-class CommunitiesScreen extends StatelessWidget {
+///
+/// Students can search the directory, join/leave communities (state lives
+/// in [CommunitiesProvider] and persists across restarts), and switch to a
+/// "My Communities" view of just the ones they've joined. Tapping a tile
+/// opens its chat — communities and events share the same [ChatScreen] /
+/// [ChatProvider] since both are just "spaces" with messages.
+class CommunitiesScreen extends StatefulWidget {
   const CommunitiesScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final communities = SeedData.communities;
+  State<CommunitiesScreen> createState() => _CommunitiesScreenState();
+}
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Communities')),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        itemCount: communities.length,
-        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-        itemBuilder: (context, index) => _CommunityTile(community: communities[index]),
+class _CommunitiesScreenState extends State<CommunitiesScreen> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Communities'),
+          bottom: TabBar(
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.mutedText,
+            indicatorColor: AppColors.primary,
+            labelStyle: AppTextStyles.label,
+            tabs: const [
+              Tab(text: 'All'),
+              Tab(text: 'My communities'),
+            ],
+          ),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Consumer<CommunitiesProvider>(
+                builder: (context, communitiesProvider, _) {
+                  return TextField(
+                    controller: _searchController,
+                    onChanged: communitiesProvider.setSearchQuery,
+                    style: AppTextStyles.body,
+                    decoration: InputDecoration(
+                      hintText: 'Search communities…',
+                      hintStyle: AppTextStyles.bodyMuted,
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppColors.mutedText),
+                      suffixIcon: communitiesProvider.searchQuery.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.close_rounded, color: AppColors.mutedText),
+                              onPressed: () {
+                                _searchController.clear();
+                                communitiesProvider.setSearchQuery('');
+                              },
+                            ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Expanded(
+              child: TabBarView(
+                children: [
+                  _CommunityList(myCommunitiesOnly: false),
+                  _CommunityList(myCommunitiesOnly: true),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _CommunityList extends StatelessWidget {
+  final bool myCommunitiesOnly;
+
+  const _CommunityList({required this.myCommunitiesOnly});
+
+  @override
+  Widget build(BuildContext context) {
+    final communitiesProvider = context.watch<CommunitiesProvider>();
+    final communities =
+        myCommunitiesOnly ? communitiesProvider.myCommunities : communitiesProvider.communities;
+
+    if (communities.isEmpty) {
+      return EmptyState(
+        icon: myCommunitiesOnly ? Icons.diversity_3_outlined : Icons.search_off_rounded,
+        title: myCommunitiesOnly ? "You haven't joined any communities" : 'No communities found',
+        message: myCommunitiesOnly
+            ? 'Join a community from the "All" tab to see it here.'
+            : 'Try a different search term.',
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+      itemCount: communities.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+      itemBuilder: (context, index) => _CommunityTile(community: communities[index]),
     );
   }
 }
@@ -37,6 +131,9 @@ class _CommunityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final communitiesProvider = context.watch<CommunitiesProvider>();
+    final joined = communitiesProvider.isJoined(community.id);
+
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => Navigator.of(context).push(
@@ -71,11 +168,20 @@ class _CommunityTile extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(community.description, style: AppTextStyles.bodyMuted, maxLines: 2, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 6),
-                  Text('${community.memberCount} members', style: AppTextStyles.caption),
+                  Text('${communitiesProvider.memberCountFor(community)} members', style: AppTextStyles.caption),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.mutedText),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: () => communitiesProvider.toggleJoin(community.id),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: joined ? AppColors.mutedText : AppColors.primary,
+                side: BorderSide(color: joined ? AppColors.border : AppColors.primary),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              ),
+              child: Text(joined ? 'Joined' : 'Join'),
+            ),
           ],
         ),
       ),

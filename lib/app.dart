@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/communities_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/passport_provider.dart';
 import 'screens/auth/auth_screen.dart';
@@ -29,6 +30,7 @@ class AnzaApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider(storageService)),
         ChangeNotifierProvider(create: (_) => EventsProvider(storageService)),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => CommunitiesProvider(storageService)),
         ChangeNotifierProxyProvider<EventsProvider, PassportProvider>(
           create: (context) => PassportProvider(storageService, context.read<EventsProvider>()),
           update: (_, _, previous) => previous!,
@@ -66,7 +68,9 @@ class _StartScreenState extends State<_StartScreen> {
       // (and its listeners) has settled.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        context.read<EventsProvider>().hydrateRsvpsForUser(user.id);
+        final eventsProvider = context.read<EventsProvider>();
+        eventsProvider.hydrateRsvpsForUser(user.id);
+        eventsProvider.loadSavedEvents();
       });
     }
   }

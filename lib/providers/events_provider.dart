@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../data/seed_data.dart';
 import '../models/event.dart';
+import '../models/user.dart';
+import '../services/saved_events_database.dart';
 import '../services/storage_service.dart';
 
 /// Holds the event catalogue plus feed-filtering state, and owns RSVP logic.
@@ -12,34 +14,74 @@ import '../services/storage_service.dart';
 /// [hydrateRsvpsForUser].
 class EventsProvider extends ChangeNotifier {
   final StorageService _storage;
+  final SavedEventsDatabase _savedEventsDb = SavedEventsDatabase();
 
   List<Event> _events = SeedData.events();
   EventCategory? _categoryFilter;
+  Campus? _campusFilter;
   String _searchQuery = '';
+  Set<String> _savedEventIds = {};
 
   EventsProvider(this._storage);
 
   List<Event> get events => List.unmodifiable(_events);
   EventCategory? get categoryFilter => _categoryFilter;
+  Campus? get campusFilter => _campusFilter;
   String get searchQuery => _searchQuery;
 
-  /// Events matching both the selected category chip and the search field.
-  /// Recomputed on read so the feed always reflects the latest filter state.
+  /// Saved-for-later events, most recently saved first.
+  List<Event> get savedEvents => _events.where((e) => _savedEventIds.contains(e.id)).toList();
+
+  bool isSaved(String eventId) => _savedEventIds.contains(eventId);
+
+  /// Loads previously saved event ids from the on-device SQLite database.
+  /// Call once after sign-in, alongside [hydrateRsvpsForUser].
+  Future<void> loadSavedEvents() async {
+    _savedEventIds = await _savedEventsDb.loadSavedEventIds();
+    notifyListeners();
+  }
+
+  /// Toggles whether [eventId] is bookmarked, persisting the change to
+  /// SQLite. Returns true if the event is now saved.
+  Future<bool> toggleSaved(String eventId) async {
+    final isCurrentlySaved = _savedEventIds.contains(eventId);
+    if (isCurrentlySaved) {
+      _savedEventIds = {..._savedEventIds}..remove(eventId);
+      await _savedEventsDb.unsave(eventId);
+    } else {
+      _savedEventIds = {..._savedEventIds, eventId};
+      await _savedEventsDb.save(eventId);
+    }
+    notifyListeners();
+    return !isCurrentlySaved;
+  }
+
+  /// Events matching the selected category chip, campus chip, and search
+  /// field. Recomputed on read so the feed always reflects the latest
+  /// filter state. Only [EventStatus.approved] events are shown — events
+  /// awaiting moderation stay on their poster's "Posted" tab until approved.
   List<Event> get filteredEvents {
     return _events.where((event) {
+      if (event.status != EventStatus.approved) return false;
       final matchesCategory = _categoryFilter == null || event.category == _categoryFilter;
+      final matchesCampus = _campusFilter == null || event.campus == _campusFilter;
       final query = _searchQuery.trim().toLowerCase();
       final matchesSearch = query.isEmpty ||
           event.title.toLowerCase().contains(query) ||
           event.location.toLowerCase().contains(query) ||
           event.posterName.toLowerCase().contains(query);
-      return matchesCategory && matchesSearch;
+      return matchesCategory && matchesCampus && matchesSearch;
     }).toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
   }
 
   void setCategoryFilter(EventCategory? category) {
     _categoryFilter = category;
+    notifyListeners();
+  }
+
+  void setCampusFilter(Campus? campus) {
+    _campusFilter = campus;
     notifyListeners();
   }
 
@@ -50,8 +92,24 @@ class EventsProvider extends ChangeNotifier {
 
   void clearFilters() {
     _categoryFilter = null;
+    _campusFilter = null;
     _searchQuery = '';
     notifyListeners();
+  }
+
+  /// Upcoming, approved events that match one of [user]'s interests —
+  /// surfaced as a "Recommended for you" rail on the feed so the app feels
+  /// tailored rather than just chronological. Events stay listed even after
+  /// the user RSVPs, so the rail doesn't reshuffle under them mid-scroll.
+  List<Event> recommendedFor(AppUser user) {
+    final now = DateTime.now();
+    return _events
+        .where((e) =>
+            e.status == EventStatus.approved &&
+            e.dateTime.isAfter(now) &&
+            user.interests.contains(e.category.label))
+        .toList()
+      ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
   }
 
   Event? eventById(String id) {
@@ -66,6 +124,13 @@ class EventsProvider extends ChangeNotifier {
   List<Event> myRsvps(String userId) {
     return _events.where((e) => e.isRsvpedBy(userId)).toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+  }
+
+  /// Events the given user has posted, most recently created first —
+  /// includes events still [EventStatus.pending] approval so posters can
+  /// track their own submissions.
+  List<Event> myPosts(String userId) {
+    return _events.where((e) => e.posterId == userId).toList();
   }
 
   /// Adds or removes [userId] from an event's RSVP list, persists the
@@ -131,6 +196,13 @@ class EventsProvider extends ChangeNotifier {
   /// Prepends a newly created event to the feed (used by Create Post).
   void addEvent(Event event) {
     _events = [event, ..._events];
+    notifyListeners();
+  }
+
+  /// Simulated refresh for pull-to-refresh — there's no backend to poll, so
+  /// this just gives the spinner something to wait on before redrawing.
+  Future<void> refresh() async {
+    await Future.delayed(const Duration(milliseconds: 700));
     notifyListeners();
   }
 }

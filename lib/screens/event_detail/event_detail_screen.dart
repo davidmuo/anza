@@ -87,7 +87,7 @@ class EventDetailScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   _InfoRow(icon: Icons.calendar_today_outlined, label: dateLabel),
                   const SizedBox(height: 10),
-                  _InfoRow(icon: Icons.place_outlined, label: event.location),
+                  _InfoRow(icon: Icons.place_outlined, label: '${event.location} • ${event.campus.label} Campus'),
                   const SizedBox(height: 10),
                   _InfoRow(
                     icon: Icons.groups_outlined,

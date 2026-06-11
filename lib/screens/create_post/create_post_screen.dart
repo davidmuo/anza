@@ -61,6 +61,7 @@ class _CreatePostFormState extends State<_CreatePostForm> {
   static const _uuid = Uuid();
 
   EventCategory _category = EventCategory.event;
+  Campus _campus = Campus.kigali;
   DateTime _dateTime = DateTime.now().add(const Duration(days: 1));
   bool _isSubmitting = false;
 
@@ -118,6 +119,7 @@ class _CreatePostFormState extends State<_CreatePostForm> {
       posterVerifiedOrg: user.verifiedOrg,
       dateTime: _dateTime,
       location: _locationController.text.trim(),
+      campus: _campus,
       imageColor: AppColors.accentPalette[Random().nextInt(AppColors.accentPalette.length)],
       checkInCode: _generateCheckInCode(),
     );
@@ -180,6 +182,20 @@ class _CreatePostFormState extends State<_CreatePostForm> {
                   label: category.label,
                   selected: _category == category,
                   onTap: () => setState(() => _category = category),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 18),
+            Text('Campus', style: AppTextStyles.label),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: Campus.values.map((campus) {
+                return CategoryChip(
+                  label: '${campus.label} Campus',
+                  selected: _campus == campus,
+                  onTap: () => setState(() => _campus = campus),
                 );
               }).toList(),
             ),

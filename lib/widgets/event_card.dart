@@ -87,7 +87,26 @@ class EventCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () => eventsProvider.toggleSaved(event.id),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.28),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(
