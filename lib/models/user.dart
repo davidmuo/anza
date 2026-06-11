@@ -18,8 +18,14 @@ class AppUser {
 
   final List<String> interests;
 
-  /// Background color used for the user's avatar initials.
+  /// Background color used for the user's avatar initials — also the
+  /// fallback shown if [avatarUrl] fails to load (e.g. offline).
   final Color avatarColor;
+
+  /// Deterministic profile photo for this user. Backed by a free
+  /// placeholder photo service (no API key required); [avatarColor] +
+  /// [initials] is the fallback if the device has no network.
+  String get avatarUrl => 'https://i.pravatar.cc/150?u=anza-$id';
 
   const AppUser({
     required this.id,
@@ -37,7 +43,8 @@ class AppUser {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 
   AppUser copyWith({
@@ -60,22 +67,22 @@ class AppUser {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'email': email,
-        'role': role.name,
-        'verifiedOrg': verifiedOrg,
-        'interests': interests,
-        'avatarColor': avatarColor.toARGB32(),
-      };
+    'id': id,
+    'name': name,
+    'email': email,
+    'role': role.name,
+    'verifiedOrg': verifiedOrg,
+    'interests': interests,
+    'avatarColor': avatarColor.toARGB32(),
+  };
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        email: json['email'] as String,
-        role: UserRole.values.byName(json['role'] as String),
-        verifiedOrg: json['verifiedOrg'] as String?,
-        interests: List<String>.from(json['interests'] as List? ?? const []),
-        avatarColor: Color(json['avatarColor'] as int? ?? 0xFF1E4D3B),
-      );
+    id: json['id'] as String,
+    name: json['name'] as String,
+    email: json['email'] as String,
+    role: UserRole.values.byName(json['role'] as String),
+    verifiedOrg: json['verifiedOrg'] as String?,
+    interests: List<String>.from(json['interests'] as List? ?? const []),
+    avatarColor: Color(json['avatarColor'] as int? ?? 0xFF1E4D3B),
+  );
 }

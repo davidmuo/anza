@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/event.dart';
@@ -11,9 +12,13 @@ import '../../widgets/campus_chip.dart';
 import '../../widgets/category_chip.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/event_card.dart';
+import '../../widgets/photo_banner.dart';
 import '../../widgets/user_avatar.dart';
+import '../chats/chats_list_screen.dart';
 import '../create_post/create_post_screen.dart';
 import '../event_detail/event_detail_screen.dart';
+import '../scan/qr_scan_screen.dart';
+import 'recommended_events_screen.dart';
 
 /// Home tab: search field, category filter chips, and a live-filtered list
 /// of [EventCard]s. This is the screen students land on after signing in.
@@ -39,6 +44,7 @@ class _FeedScreenState extends State<FeedScreen> {
     final eventsProvider = context.watch<EventsProvider>();
     final user = auth.currentUser!;
     final filteredEvents = eventsProvider.filteredEvents;
+    final recommended = eventsProvider.recommendedFor(user);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -54,24 +60,41 @@ class _FeedScreenState extends State<FeedScreen> {
                 ],
               ),
             ),
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline_rounded),
+              tooltip: 'Chats',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ChatsListScreen()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              tooltip: 'Scan QR code',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const QrScanScreen()),
+                );
+              },
+            ),
+            const SizedBox(width: 4),
             UserAvatar(user: user, radius: 20),
           ],
         ),
         toolbarHeight: 72,
       ),
-      floatingActionButton: user.isVerified
-          ? FloatingActionButton.extended(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('New event'),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CreatePostScreen()),
-                );
-              },
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New event'),
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+          );
+        },
+      ),
       body: Column(
         children: [
           Padding(
@@ -151,34 +174,170 @@ class _FeedScreenState extends State<FeedScreen> {
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
           Expanded(
-            child: filteredEvents.isEmpty
-                ? const EmptyState(
-                    icon: Icons.event_busy_outlined,
-                    title: 'No events match',
-                    message: 'Try a different search term, or clear the category/campus filters.',
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl,
+            child: RefreshIndicator(
+              onRefresh: eventsProvider.refresh,
+              color: AppColors.primary,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  if (recommended.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _RecommendedSection(recommended: recommended),
                     ),
-                    itemCount: filteredEvents.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
-                    itemBuilder: (context, index) {
-                      final event = filteredEvents[index];
-                      return EventCard(
-                        event: event,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                  if (filteredEvents.isEmpty)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 40, bottom: 80),
+                        child: EmptyState(
+                          icon: Icons.event_busy_outlined,
+                          title: 'No events match',
+                          message: 'Try a different search term, or clear the category/campus filters.',
+                        ),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl,
+                      ),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            if (index.isOdd) return const SizedBox(height: AppSpacing.lg);
+                            final event = filteredEvents[index ~/ 2];
+                            return EventCard(
+                              event: event,
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+                                );
+                              },
+                            );
+                          },
+                          childCount: filteredEvents.length * 2 - 1,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Recommended for you" rail — sits inline at the top of the feed's
+/// scrollable list (rather than above it) so it scrolls away naturally
+/// instead of eating into the events list's space.
+class _RecommendedSection extends StatelessWidget {
+  final List<Event> recommended;
+
+  const _RecommendedSection({required this.recommended});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Row(
+            children: [
+              Expanded(child: Text('Recommended for you', style: AppTextStyles.h2)),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RecommendedEventsScreen()),
+                  );
+                },
+                child: const Text('See more'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SizedBox(
+          height: 168,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            itemCount: recommended.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
+            itemBuilder: (context, index) {
+              final event = recommended[index];
+              return _RecommendedCard(
+                event: event,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Compact horizontal-rail card used by the "Recommended for you" section —
+/// a smaller cousin of [EventCard] that fits in a fixed-height row.
+class _RecommendedCard extends StatelessWidget {
+  final Event event;
+  final VoidCallback onTap;
+
+  const _RecommendedCard({required this.event, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel = DateFormat('EEE, MMM d').format(event.dateTime);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        width: 220,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 84,
+              width: double.infinity,
+              child: PhotoBanner(imageUrl: event.imageUrl, color: event.imageColor),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      event.title,
+                      style: AppTextStyles.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(dateLabel, style: AppTextStyles.caption),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

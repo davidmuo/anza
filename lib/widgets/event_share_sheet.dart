@@ -9,6 +9,7 @@ import '../models/event.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme.dart';
+import 'feedback_toast.dart';
 
 void showEventShareSheet(BuildContext context, Event event) {
   showModalBottomSheet<void>(
@@ -45,9 +46,13 @@ class _EventShareSheet extends StatelessWidget {
   Future<void> _copyLink(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: _shareText));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Link copied to clipboard.')),
-    );
+    showFeedbackToast(context, message: 'Link copied to clipboard.');
+  }
+
+  Future<void> _copyCode(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: event.shareCode));
+    if (!context.mounted) return;
+    showFeedbackToast(context, message: 'Code copied to clipboard.');
   }
 
   @override
@@ -101,6 +106,53 @@ class _EventShareSheet extends StatelessWidget {
               'Scan in Anza to open this event',
               style: AppTextStyles.caption,
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Can't scan? Use this code instead",
+              style: AppTextStyles.caption,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.ink,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    event.shareCode,
+                    style: AppTextStyles.h2.copyWith(
+                      color: Colors.white,
+                      letterSpacing: 6,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => _copyCode(context),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.copy_rounded,
+                      color: AppColors.secondary,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             Row(

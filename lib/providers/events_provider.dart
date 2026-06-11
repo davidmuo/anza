@@ -120,6 +120,26 @@ class EventsProvider extends ChangeNotifier {
     }
   }
 
+  /// Looks up an event by a manually-typed code — either its check-in code
+  /// (door code, organizer side) or its share code (the event's id), used
+  /// as a fallback on the QR scan screen when scanning isn't possible.
+  ({Event event, bool isCheckInCode})? eventByCode(String code) {
+    final normalized = code.trim().toUpperCase();
+    if (normalized.isEmpty) return null;
+
+    for (final event in _events) {
+      if (event.checkInCode.toUpperCase() == normalized) {
+        return (event: event, isCheckInCode: true);
+      }
+    }
+    for (final event in _events) {
+      if (event.shareCode == normalized) {
+        return (event: event, isCheckInCode: false);
+      }
+    }
+    return null;
+  }
+
   /// Events the given user has RSVP'd to, soonest first.
   List<Event> myRsvps(String userId) {
     return _events.where((e) => e.isRsvpedBy(userId)).toList()

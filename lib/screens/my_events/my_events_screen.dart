@@ -13,18 +13,20 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/event_card.dart';
 import '../event_detail/event_detail_screen.dart';
 
-/// "My Events" tab — two sections via a top tab bar:
+/// "My Events" tab — three sections via a top tab bar:
 ///   • Going: events the user has RSVP'd to
 ///   • Attended: events recorded in the participation passport
+///   • Posted: events the user has published, including ones still
+///     awaiting approval
 ///
-/// Both lists reuse [EventCard] and live-update as RSVPs/check-ins change.
+/// All lists reuse [EventCard] and live-update as RSVPs/check-ins/posts change.
 class MyEventsScreen extends StatelessWidget {
   const MyEventsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -37,6 +39,7 @@ class MyEventsScreen extends StatelessWidget {
             tabs: const [
               Tab(text: 'Going'),
               Tab(text: 'Attended'),
+              Tab(text: 'Posted'),
             ],
           ),
         ),
@@ -44,6 +47,7 @@ class MyEventsScreen extends StatelessWidget {
           children: [
             _GoingTab(),
             _AttendedTab(),
+            _PostedTab(),
           ],
         ),
       ),
@@ -60,27 +64,36 @@ class _GoingTab extends StatelessWidget {
     final eventsProvider = context.watch<EventsProvider>();
     final going = eventsProvider.myRsvps(user.id);
 
-    if (going.isEmpty) {
-      return const EmptyState(
-        icon: Icons.event_available_outlined,
-        title: 'No upcoming RSVPs',
-        message: 'Browse the feed and tap RSVP on events you plan to attend.',
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      itemCount: going.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
-      itemBuilder: (context, index) {
-        final event = going[index];
-        return EventCard(
-          event: event,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
-          ),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: eventsProvider.refresh,
+      color: AppColors.primary,
+      child: going.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 80),
+                EmptyState(
+                  icon: Icons.event_available_outlined,
+                  title: 'No upcoming RSVPs',
+                  message: 'Browse the feed and tap RSVP on events you plan to attend.',
+                ),
+              ],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: going.length,
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
+              itemBuilder: (context, index) {
+                final event = going[index];
+                return EventCard(
+                  event: event,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -94,35 +107,110 @@ class _AttendedTab extends StatelessWidget {
     final eventsProvider = context.watch<EventsProvider>();
     final entries = passport.entries;
 
-    if (entries.isEmpty) {
-      return const EmptyState(
-        icon: Icons.qr_code_2_outlined,
-        title: 'No attended events yet',
-        message: 'Check in at an event on the day it happens to add it here.',
-      );
-    }
+    return RefreshIndicator(
+      onRefresh: eventsProvider.refresh,
+      color: AppColors.primary,
+      child: entries.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 80),
+                EmptyState(
+                  icon: Icons.qr_code_2_outlined,
+                  title: 'No attended events yet',
+                  message: 'Check in at an event on the day it happens to add it here.',
+                ),
+              ],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: entries.length,
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
+              itemBuilder: (context, index) {
+                final entry = entries[index];
+                final event = eventsProvider.eventById(entry.eventId);
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      itemCount: entries.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
-      itemBuilder: (context, index) {
-        final entry = entries[index];
-        final event = eventsProvider.eventById(entry.eventId);
+                // If the underlying event ever disappears, fall back to a simple
+                // tile built from the passport entry alone so history is preserved.
+                if (event == null) {
+                  return _AttendedFallbackTile(entry: entry);
+                }
 
-        // If the underlying event ever disappears, fall back to a simple
-        // tile built from the passport entry alone so history is preserved.
-        if (event == null) {
-          return _AttendedFallbackTile(entry: entry);
-        }
+                return EventCard(
+                  event: event,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
 
-        return EventCard(
-          event: event,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
-          ),
-        );
-      },
+class _PostedTab extends StatelessWidget {
+  const _PostedTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser!;
+    final eventsProvider = context.watch<EventsProvider>();
+    final posted = eventsProvider.myPosts(user.id);
+
+    return RefreshIndicator(
+      onRefresh: eventsProvider.refresh,
+      color: AppColors.primary,
+      child: posted.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 80),
+                EmptyState(
+                  icon: Icons.campaign_outlined,
+                  title: 'Nothing posted yet',
+                  message: 'Tap "New event" on the feed to publish something for the campus.',
+                ),
+              ],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: posted.length,
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
+              itemBuilder: (context, index) {
+                final event = posted[index];
+                return Stack(
+                  children: [
+                    EventCard(
+                      event: event,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+                      ),
+                    ),
+                    if (event.status == EventStatus.pending)
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'Pending approval',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
     );
   }
 }

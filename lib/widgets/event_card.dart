@@ -6,6 +6,7 @@ import '../models/event.dart';
 import '../providers/events_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'feedback_toast.dart';
 import 'photo_banner.dart';
 import 'verified_badge.dart';
 
@@ -40,6 +41,7 @@ class EventCard extends StatelessWidget {
               child: PhotoBanner(
                 imageUrl: event.imageUrl,
                 color: event.imageColor,
+                imagePath: event.imagePath,
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Stack(
@@ -67,7 +69,21 @@ class EventCard extends StatelessWidget {
                       Align(
                         alignment: Alignment.topRight,
                         child: GestureDetector(
-                          onTap: () => eventsProvider.toggleSaved(event.id),
+                          onTap: () async {
+                            final nowSaved = await eventsProvider.toggleSaved(
+                              event.id,
+                            );
+                            if (!context.mounted) return;
+                            showFeedbackToast(
+                              context,
+                              message: nowSaved
+                                  ? 'Saved "${event.title}"'
+                                  : 'Removed from saved events',
+                              icon: nowSaved
+                                  ? Icons.bookmark_rounded
+                                  : Icons.bookmark_border_rounded,
+                            );
+                          },
                           child: Container(
                             width: 32,
                             height: 32,
@@ -75,38 +91,28 @@ class EventCard extends StatelessWidget {
                               color: Colors.black.withValues(alpha: 0.28),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
-                              isSaved
-                                  ? Icons.bookmark_rounded
-                                  : Icons.bookmark_border_rounded,
-                              color: Colors.white,
-                              size: 18,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              transitionBuilder: (child, animation) =>
+                                  ScaleTransition(
+                                    scale: animation,
+                                    child: child,
+                                  ),
+                              child: Icon(
+                                isSaved
+                                    ? Icons.bookmark_rounded
+                                    : Icons.bookmark_border_rounded,
+                                key: ValueKey(isSaved),
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: GestureDetector(
-                      onTap: () => eventsProvider.toggleSaved(event.id),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.28),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
             Padding(
@@ -150,8 +156,10 @@ class EventCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text(dateLabel, style: AppTextStyles.caption),
                       const SizedBox(width: 14),
-                      const Icon(
-                        Icons.place_outlined,
+                      Icon(
+                        event.isOnline
+                            ? Icons.videocam_outlined
+                            : Icons.place_outlined,
                         size: 15,
                         color: AppColors.mutedText,
                       ),

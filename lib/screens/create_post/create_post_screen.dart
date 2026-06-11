@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -13,35 +15,24 @@ import '../../theme/app_text_styles.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/category_chip.dart';
-import '../../widgets/empty_state.dart';
 import '../../widgets/primary_button.dart';
 
-/// Event-creation form, gated to verified users — the core of Anza's
-/// "trust model": only verified clubs/teams/founders can post, so the
-/// feed stays signal over noise.
+/// Event-creation form, open to every student.
 ///
-/// Students who land here (they shouldn't via normal navigation, but a
-/// defensive check costs nothing) see an explanatory empty state instead
-/// of a broken form.
+/// Verified posters (clubs, academic teams, founders) publish straight to
+/// the feed. Anyone else can still post — their event is held as
+/// [EventStatus.pending] on their "Posted" tab until a verified moderator
+/// approves it, keeping the public feed signal over noise without locking
+/// regular students out entirely.
 class CreatePostScreen extends StatelessWidget {
   const CreatePostScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().currentUser!;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('New event')),
-      body: user.isVerified
-          ? const _CreatePostForm()
-          : const EmptyState(
-              icon: Icons.lock_outline_rounded,
-              title: 'Verified posters only',
-              message: 'To keep the feed trustworthy, only verified clubs, academic '
-                  'teams, and founders can publish events. Reach out to your club '
-                  'lead if you think your organization should be verified.',
-            ),
+      body: const _CreatePostForm(),
     );
   }
 }
@@ -58,18 +49,24 @@ class _CreatePostFormState extends State<_CreatePostForm> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
+  final _mapLinkController = TextEditingController();
+  final _meetingLinkController = TextEditingController();
   static const _uuid = Uuid();
 
   EventCategory _category = EventCategory.event;
   Campus _campus = Campus.kigali;
+  EventMode _mode = EventMode.inPerson;
   DateTime _dateTime = DateTime.now().add(const Duration(days: 1));
   bool _isSubmitting = false;
+  XFile? _image;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
+    _mapLinkController.dispose();
+    _meetingLinkController.dispose();
     super.dispose();
   }
 
@@ -91,6 +88,16 @@ class _CreatePostFormState extends State<_CreatePostForm> {
     setState(() {
       _dateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
     });
+  }
+
+  Future<void> _pickImage() async {
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (image == null || !mounted) return;
+    setState(() => _image = image);
   }
 
   /// Generates a random 6-character uppercase alphanumeric check-in code —
@@ -118,10 +125,21 @@ class _CreatePostFormState extends State<_CreatePostForm> {
       posterName: user.name,
       posterVerifiedOrg: user.verifiedOrg,
       dateTime: _dateTime,
-      location: _locationController.text.trim(),
+      location: _mode == EventMode.online
+          ? 'Online'
+          : _locationController.text.trim(),
       campus: _campus,
+      mode: _mode,
+      meetingLink: _mode == EventMode.online
+          ? _meetingLinkController.text.trim()
+          : null,
+      mapLink: _mode == EventMode.inPerson && _mapLinkController.text.trim().isNotEmpty
+          ? _mapLinkController.text.trim()
+          : null,
       imageColor: AppColors.accentPalette[Random().nextInt(AppColors.accentPalette.length)],
+      imagePath: _image?.path,
       checkInCode: _generateCheckInCode(),
+      status: user.isVerified ? EventStatus.approved : EventStatus.pending,
     );
 
     eventsProvider.addEvent(event);
@@ -130,7 +148,14 @@ class _CreatePostFormState extends State<_CreatePostForm> {
     setState(() => _isSubmitting = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('"${event.title}" is live on the feed.')),
+      SnackBar(
+        content: Text(
+          user.isVerified
+              ? '"${event.title}" is live on the feed.'
+              : '"${event.title}" was submitted for approval. '
+                  "You'll find it on your Posted tab once it's reviewed.",
+        ),
+      ),
     );
     Navigator.of(context).pop();
   }
@@ -138,6 +163,7 @@ class _CreatePostFormState extends State<_CreatePostForm> {
   @override
   Widget build(BuildContext context) {
     final dateLabel = DateFormat('EEE, MMM d • h:mm a').format(_dateTime);
+    final user = context.watch<AuthProvider>().currentUser!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -149,10 +175,97 @@ class _CreatePostFormState extends State<_CreatePostForm> {
             Text('Post a new event', style: AppTextStyles.h1),
             const SizedBox(height: 6),
             Text(
-              'This will appear at the top of the feed for every student to see.',
+              user.isVerified
+                  ? 'This will appear at the top of the feed for every student to see.'
+                  : "Since your account isn't verified yet, this will be reviewed "
+                      'before it appears on the feed. You can track its status on '
+                      'your Posted tab.',
               style: AppTextStyles.bodyMuted,
             ),
+            if (!user.isVerified) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.hourglass_top_rounded, color: AppColors.secondary, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Pending approval after you submit.',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.secondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
+            Text('Photo', style: AppTextStyles.label),
+            const SizedBox(height: 10),
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: _pickImage,
+              child: Container(
+                width: double.infinity,
+                height: 160,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: _image == null
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.add_photo_alternate_outlined,
+                            color: AppColors.mutedText,
+                            size: 28,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Add a photo (optional)',
+                            style: AppTextStyles.bodyMuted,
+                          ),
+                        ],
+                      )
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.file(File(_image!.path), fit: BoxFit.cover),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(999),
+                              onTap: () => setState(() => _image = null),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.45),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 18),
             AppTextField(
               label: 'Title',
               controller: _titleController,
@@ -186,6 +299,20 @@ class _CreatePostFormState extends State<_CreatePostForm> {
               }).toList(),
             ),
             const SizedBox(height: 18),
+            Text('Format', style: AppTextStyles.label),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: EventMode.values.map((mode) {
+                return CategoryChip(
+                  label: mode.label,
+                  selected: _mode == mode,
+                  onTap: () => setState(() => _mode = mode),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 18),
             Text('Campus', style: AppTextStyles.label),
             const SizedBox(height: 10),
             Wrap(
@@ -200,15 +327,50 @@ class _CreatePostFormState extends State<_CreatePostForm> {
               }).toList(),
             ),
             const SizedBox(height: 18),
-            AppTextField(
-              label: 'Location',
-              controller: _locationController,
-              hint: 'e.g. Innovation Hub, Room 204',
-              textCapitalization: TextCapitalization.words,
-              validator: (value) =>
-                  (value == null || value.trim().isEmpty) ? 'Add a location' : null,
-            ),
-            const SizedBox(height: 18),
+            if (_mode == EventMode.online) ...[
+              AppTextField(
+                label: 'Meeting link',
+                controller: _meetingLinkController,
+                hint: 'e.g. https://zoom.us/j/123456789',
+                keyboardType: TextInputType.url,
+                validator: (value) {
+                  final trimmed = value?.trim() ?? '';
+                  if (trimmed.isEmpty) return 'Add a Zoom or Google Meet link';
+                  final uri = Uri.tryParse(trimmed);
+                  if (uri == null || !uri.isScheme('HTTP') && !uri.isScheme('HTTPS')) {
+                    return 'Enter a valid link starting with https://';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 18),
+            ] else ...[
+              AppTextField(
+                label: 'Location',
+                controller: _locationController,
+                hint: 'e.g. Innovation Hub, Room 204',
+                textCapitalization: TextCapitalization.words,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty) ? 'Add a location' : null,
+              ),
+              const SizedBox(height: 18),
+              AppTextField(
+                label: 'Map link (optional)',
+                controller: _mapLinkController,
+                hint: 'e.g. https://maps.app.goo.gl/...',
+                keyboardType: TextInputType.url,
+                validator: (value) {
+                  final trimmed = value?.trim() ?? '';
+                  if (trimmed.isEmpty) return null;
+                  final uri = Uri.tryParse(trimmed);
+                  if (uri == null || !uri.isScheme('HTTP') && !uri.isScheme('HTTPS')) {
+                    return 'Enter a valid link starting with https://';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 18),
+            ],
             Text('Date & time', style: AppTextStyles.label),
             const SizedBox(height: 8),
             InkWell(

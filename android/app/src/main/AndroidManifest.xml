@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Used to load event banner photos and profile pictures from a
+         placeholder photo service; the app falls back to colored
+         initials/banners if the device is offline. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Used by the in-app QR scanner to scan event-share and check-in codes. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <application
         android:label="anza"
         android:name="${applicationName}"

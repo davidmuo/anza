@@ -2,24 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../models/event.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/passport_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/feedback_toast.dart';
 import '../../widgets/primary_button.dart';
 
 /// Check-in flow for one event.
 ///
-/// Attendees type the 6-character code an organizer reads out at the door.
-/// If the signed-in user *is* that organizer (the event's poster), we skip
-/// the entry form and instead display the code as a QR — display-only,
-/// since the brief explicitly rules out camera scanning on the emulator.
+/// Attendees type the 6-character code an organizer reads out at the door,
+/// or scan the organizer's QR code in the in-app scanner — either way it
+/// lands here. If the signed-in user *is* that organizer (the event's
+/// poster), we skip the entry form and instead display the code as a QR.
 class CheckInScreen extends StatefulWidget {
   final String eventId;
 
-  const CheckInScreen({super.key, required this.eventId});
+  /// Pre-filled from the QR scanner, if check-in was triggered that way —
+  /// submitted automatically once the screen loads.
+  final String? scannedCode;
+
+  const CheckInScreen({super.key, required this.eventId, this.scannedCode});
 
   @override
   State<CheckInScreen> createState() => _CheckInScreenState();
@@ -31,6 +37,20 @@ class _CheckInScreenState extends State<CheckInScreen> {
   String? _errorText;
   bool _isSubmitting = false;
   bool _justSucceeded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final scanned = widget.scannedCode;
+    if (scanned != null) {
+      _codeController.text = scanned.toUpperCase();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final userId = context.read<AuthProvider>().currentUser!.id;
+        _submit(userId);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -59,18 +79,20 @@ class _CheckInScreenState extends State<CheckInScreen> {
     switch (result) {
       case CheckInResult.success:
         setState(() => _justSucceeded = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("You're checked in to ${event.title}! Added to your passport."),
-            backgroundColor: AppColors.success,
-          ),
+        showFeedbackToast(
+          context,
+          message:
+              "You're checked in to ${event.title}! Added to your passport.",
         );
         Future.delayed(const Duration(milliseconds: 900), () {
           if (mounted) Navigator.of(context).pop();
         });
         break;
       case CheckInResult.wrongCode:
-        setState(() => _errorText = "That code doesn't match — double-check with the organizer.");
+        setState(
+          () => _errorText =
+              "That code doesn't match — double-check with the organizer.",
+        );
         break;
       case CheckInResult.alreadyCheckedIn:
         setState(() => _errorText = "You've already checked in to this event.");
@@ -98,7 +120,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
       appBar: AppBar(title: const Text('Event check-in')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: isOrganizer ? _OrganizerQrView(code: event.checkInCode, eventTitle: event.title) : _attendeeForm(event.title, user.id),
+        child: isOrganizer
+            ? _OrganizerQrView(event: event)
+            : _attendeeForm(event.title, user.id),
       ),
     );
   }
@@ -109,17 +133,34 @@ class _CheckInScreenState extends State<CheckInScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: _justSucceeded ? AppColors.success.withValues(alpha: 0.12) : AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(
-              _justSucceeded ? Icons.check_circle_rounded : Icons.confirmation_number_outlined,
-              color: _justSucceeded ? AppColors.success : AppColors.primary,
-              size: 30,
+          AnimatedScale(
+            scale: _justSucceeded ? 1.1 : 1,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.elasticOut,
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: _justSucceeded
+                    ? AppColors.success.withValues(alpha: 0.12)
+                    : AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, animation) =>
+                    ScaleTransition(scale: animation, child: child),
+                child: Icon(
+                  _justSucceeded
+                      ? Icons.check_circle_rounded
+                      : Icons.confirmation_number_outlined,
+                  key: ValueKey(_justSucceeded),
+                  color: _justSucceeded
+                      ? AppColors.success
+                      : AppColors.primary,
+                  size: 30,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -142,7 +183,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
               hintText: 'A1B2C3',
             ),
             validator: (value) {
-              if (value == null || value.trim().length != 6) return 'Enter the 6-character code';
+              if (value == null || value.trim().length != 6) {
+                return 'Enter the 6-character code';
+              }
               return null;
             },
           ),
@@ -154,14 +197,25 @@ class _CheckInScreenState extends State<CheckInScreen> {
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.error.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: AppColors.error,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(_errorText!, style: AppTextStyles.caption.copyWith(color: AppColors.error)),
+                    child: Text(
+                      _errorText!,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -181,23 +235,25 @@ class _CheckInScreenState extends State<CheckInScreen> {
 }
 
 /// Read-only QR display for event organizers — lets them show the
-/// check-in code at the door without anyone needing to type it manually.
+/// check-in code at the door for attendees to scan with the in-app
+/// scanner, or read aloud and type manually.
 class _OrganizerQrView extends StatelessWidget {
-  final String code;
-  final String eventTitle;
+  final Event event;
 
-  const _OrganizerQrView({required this.code, required this.eventTitle});
+  const _OrganizerQrView({required this.event});
 
   @override
   Widget build(BuildContext context) {
+    final code = event.checkInCode;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Show this at the door', style: AppTextStyles.h1),
         const SizedBox(height: 8),
         Text(
-          'You posted "$eventTitle" — attendees can scan or read this code to check '
-          'themselves in and add the event to their passport.',
+          'You posted "${event.title}" — attendees can scan this with the Anza QR '
+          'scanner, or read this code aloud, to check themselves in and add the '
+          'event to their passport.',
           style: AppTextStyles.bodyMuted,
         ),
         const SizedBox(height: 28),
@@ -210,12 +266,18 @@ class _OrganizerQrView extends StatelessWidget {
               border: Border.all(color: AppColors.border),
             ),
             child: QrImageView(
-              data: code,
+              data: event.checkInLink,
               version: QrVersions.auto,
               size: 200,
               backgroundColor: Colors.white,
-              eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.ink),
-              dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppColors.ink),
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: AppColors.ink,
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: AppColors.ink,
+              ),
             ),
           ),
         ),
@@ -229,7 +291,10 @@ class _OrganizerQrView extends StatelessWidget {
             ),
             child: Text(
               code,
-              style: AppTextStyles.h2.copyWith(color: Colors.white, letterSpacing: 6),
+              style: AppTextStyles.h2.copyWith(
+                color: Colors.white,
+                letterSpacing: 6,
+              ),
             ),
           ),
         ),

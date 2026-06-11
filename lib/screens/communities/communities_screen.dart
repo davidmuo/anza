@@ -105,21 +105,30 @@ class _CommunityList extends StatelessWidget {
     final communities =
         myCommunitiesOnly ? communitiesProvider.myCommunities : communitiesProvider.communities;
 
-    if (communities.isEmpty) {
-      return EmptyState(
-        icon: myCommunitiesOnly ? Icons.diversity_3_outlined : Icons.search_off_rounded,
-        title: myCommunitiesOnly ? "You haven't joined any communities" : 'No communities found',
-        message: myCommunitiesOnly
-            ? 'Join a community from the "All" tab to see it here.'
-            : 'Try a different search term.',
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
-      itemCount: communities.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-      itemBuilder: (context, index) => _CommunityTile(community: communities[index]),
+    return RefreshIndicator(
+      onRefresh: communitiesProvider.refresh,
+      color: AppColors.primary,
+      child: communities.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                const SizedBox(height: 80),
+                EmptyState(
+                  icon: myCommunitiesOnly ? Icons.diversity_3_outlined : Icons.search_off_rounded,
+                  title: myCommunitiesOnly ? "You haven't joined any communities" : 'No communities found',
+                  message: myCommunitiesOnly
+                      ? 'Join a community from the "All" tab to see it here.'
+                      : 'Try a different search term.',
+                ),
+              ],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+              itemCount: communities.length,
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+              itemBuilder: (context, index) => _CommunityTile(community: communities[index]),
+            ),
     );
   }
 }

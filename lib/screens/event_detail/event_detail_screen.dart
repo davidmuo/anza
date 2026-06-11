@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/event.dart';
 import '../../providers/auth_provider.dart';
@@ -9,6 +10,10 @@ import '../../providers/passport_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/event_map_preview.dart';
+import '../../widgets/event_share_sheet.dart';
+import '../../widgets/feedback_toast.dart';
+import '../../widgets/photo_banner.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/verified_badge.dart';
 import '../checkin/checkin_screen.dart';
@@ -36,7 +41,9 @@ class EventDetailScreen extends StatelessWidget {
 
     final isRsvped = event.isRsvpedBy(user.id);
     final hasCheckedIn = passport.entries.any((e) => e.eventId == event.id);
-    final dateLabel = DateFormat('EEEE, MMMM d • h:mm a').format(event.dateTime);
+    final dateLabel = DateFormat(
+      'EEEE, MMMM d • h:mm a',
+    ).format(event.dateTime);
     final canCheckIn = isRsvped && event.isToday && !hasCheckedIn;
 
     return Scaffold(
@@ -48,20 +55,38 @@ class EventDetailScreen extends StatelessWidget {
             expandedHeight: 180,
             pinned: true,
             iconTheme: const IconThemeData(color: Colors.white),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share_rounded),
+                tooltip: 'Share event',
+                onPressed: () => showEventShareSheet(context, event),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
+              background: PhotoBanner(
+                imageUrl: event.imageUrl,
                 color: event.imageColor,
-                alignment: Alignment.bottomLeft,
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.28),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    event.category.label,
-                    style: AppTextStyles.label.copyWith(color: Colors.white),
+                imagePath: event.imagePath,
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        event.category.label,
+                        style: AppTextStyles.label.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -73,11 +98,17 @@ class EventDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(event.title, style: AppTextStyles.display.copyWith(fontSize: 26)),
+                  Text(
+                    event.title,
+                    style: AppTextStyles.display.copyWith(fontSize: 26),
+                  ),
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      Text('Hosted by ${event.posterName}', style: AppTextStyles.bodyMuted),
+                      Text(
+                        'Hosted by ${event.posterName}',
+                        style: AppTextStyles.bodyMuted,
+                      ),
                       if (event.postedByVerifiedOrg) ...[
                         const SizedBox(width: 8),
                         VerifiedBadge(label: event.posterVerifiedOrg!),
@@ -85,13 +116,41 @@ class EventDetailScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  _InfoRow(icon: Icons.calendar_today_outlined, label: dateLabel),
+                  _InfoRow(
+                    icon: Icons.calendar_today_outlined,
+                    label: dateLabel,
+                  ),
                   const SizedBox(height: 10),
-                  _InfoRow(icon: Icons.place_outlined, label: '${event.location} • ${event.campus.label} Campus'),
+                  if (event.isOnline) ...[
+                    _InfoRow(
+                      icon: Icons.videocam_outlined,
+                      label: 'Online • ${event.campus.label} Campus',
+                    ),
+                    const SizedBox(height: 12),
+                    PrimaryButton(
+                      label: 'Join the call',
+                      icon: Icons.video_call_rounded,
+                      color: AppColors.surface,
+                      textColor: AppColors.ink,
+                      onPressed: () async {
+                        final uri = Uri.tryParse(event.meetingLink ?? '');
+                        if (uri == null) return;
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      },
+                    ),
+                  ] else ...[
+                    _InfoRow(
+                      icon: Icons.place_outlined,
+                      label: '${event.location} • ${event.campus.label} Campus',
+                    ),
+                    const SizedBox(height: 12),
+                    EventMapPreview(event: event),
+                  ],
                   const SizedBox(height: 10),
                   _InfoRow(
                     icon: Icons.groups_outlined,
-                    label: '${event.attendeeUserIds.length} attended • ${event.rsvpUserIds.length} going',
+                    label:
+                        '${event.attendeeUserIds.length} attended • ${event.rsvpUserIds.length} going',
                   ),
                   const SizedBox(height: 24),
                   Text('About this event', style: AppTextStyles.h2),
@@ -100,21 +159,27 @@ class EventDetailScreen extends StatelessWidget {
                   const SizedBox(height: 32),
 
                   PrimaryButton(
-                    label: isRsvped ? "You're going — tap to cancel" : 'RSVP to this event',
-                    icon: isRsvped ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
+                    label: isRsvped
+                        ? "You're going — tap to cancel"
+                        : 'RSVP to this event',
+                    icon: isRsvped
+                        ? Icons.check_circle_rounded
+                        : Icons.add_circle_outline_rounded,
                     color: isRsvped ? AppColors.surface : AppColors.primary,
                     textColor: isRsvped ? AppColors.ink : Colors.white,
                     onPressed: () async {
-                      final wasAdded = await context.read<EventsProvider>().toggleRsvp(event.id, user.id);
+                      final wasAdded = await context
+                          .read<EventsProvider>()
+                          .toggleRsvp(event.id, user.id);
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            wasAdded
-                                ? "You're on the list for ${event.title}."
-                                : "You've cancelled your RSVP for ${event.title}.",
-                          ),
-                        ),
+                      showFeedbackToast(
+                        context,
+                        message: wasAdded
+                            ? "You're on the list for ${event.title}."
+                            : "You've cancelled your RSVP for ${event.title}.",
+                        icon: wasAdded
+                            ? Icons.check_circle_rounded
+                            : Icons.event_busy_rounded,
                       );
                     },
                   ),
@@ -127,7 +192,8 @@ class EventDetailScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => ChatScreen(spaceId: event.id, title: event.title),
+                          builder: (_) =>
+                              ChatScreen(spaceId: event.id, title: event.title),
                         ),
                       );
                     },
@@ -140,16 +206,23 @@ class EventDetailScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.success.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppColors.success.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.task_alt_rounded, color: AppColors.success),
+                          const Icon(
+                            Icons.task_alt_rounded,
+                            color: AppColors.success,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               "You're checked in — this event is in your passport.",
-                              style: AppTextStyles.body.copyWith(color: AppColors.success),
+                              style: AppTextStyles.body.copyWith(
+                                color: AppColors.success,
+                              ),
                             ),
                           ),
                         ],
@@ -163,7 +236,9 @@ class EventDetailScreen extends StatelessWidget {
                       color: AppColors.secondary,
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => CheckInScreen(eventId: event.id)),
+                          MaterialPageRoute(
+                            builder: (_) => CheckInScreen(eventId: event.id),
+                          ),
                         );
                       },
                     ),
