@@ -6,13 +6,9 @@ import '../models/event.dart';
 import '../providers/events_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'photo_banner.dart';
 import 'verified_badge.dart';
 
-/// Card representation of an [Event] for the feed and "My Events" lists.
-///
-/// Shows a colored banner (standing in for a real photo), category tag,
-/// title, poster identity with verification badge, and date/location —
-/// everything a student needs to decide whether to tap in for details.
 class EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
@@ -38,30 +34,58 @@ class EventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Placeholder banner — solid color block stands in for a photo.
-            Container(
+            SizedBox(
               height: 110,
               width: double.infinity,
-              color: event.imageColor,
-              padding: const EdgeInsets.all(12),
-              child: Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.28),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        event.category.label,
-                        style: AppTextStyles.caption.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+              child: PhotoBanner(
+                imageUrl: event.imageUrl,
+                color: event.imageColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Stack(
+                    children: [
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.28),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            event.category.label,
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: GestureDetector(
+                          onTap: () => eventsProvider.toggleSaved(event.id),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.28),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isSaved
+                                  ? Icons.bookmark_rounded
+                                  : Icons.bookmark_border_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   Align(
                     alignment: Alignment.topRight,
@@ -108,18 +132,29 @@ class EventCard extends StatelessWidget {
                       ),
                       if (event.postedByVerifiedOrg) ...[
                         const SizedBox(width: 6),
-                        VerifiedBadge(label: event.posterVerifiedOrg!, compact: true),
+                        VerifiedBadge(
+                          label: event.posterVerifiedOrg!,
+                          compact: true,
+                        ),
                       ],
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_outlined, size: 15, color: AppColors.mutedText),
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 15,
+                        color: AppColors.mutedText,
+                      ),
                       const SizedBox(width: 6),
                       Text(dateLabel, style: AppTextStyles.caption),
                       const SizedBox(width: 14),
-                      const Icon(Icons.place_outlined, size: 15, color: AppColors.mutedText),
+                      const Icon(
+                        Icons.place_outlined,
+                        size: 15,
+                        color: AppColors.mutedText,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
