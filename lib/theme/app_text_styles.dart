@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Centralized type scale for Anza.
-///
-/// Headings use Space Grotesk for a distinctive, modern feel; body copy
-/// uses Inter for readability. Keeping the scale here means every screen
-/// pulls from the same handful of styles instead of inventing new ones.
 class AppTextStyles {
   AppTextStyles._();
+
+  static TextStyle get wordmark => GoogleFonts.fraunces(
+        fontSize: 44,
+        fontWeight: FontWeight.w600,
+        fontStyle: FontStyle.italic,
+        color: AppColors.ink,
+        letterSpacing: 1,
+      );
 
   static TextStyle get display => GoogleFonts.spaceGrotesk(
         fontSize: 32,
