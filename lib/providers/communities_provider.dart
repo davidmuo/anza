@@ -58,4 +58,11 @@ class CommunitiesProvider extends ChangeNotifier {
     notifyListeners();
     await _storage.saveJoinedCommunityIds(_joinedIds.toList());
   }
+
+  /// Simulated refresh for pull-to-refresh — there's no backend to poll, so
+  /// this just gives the spinner something to wait on before redrawing.
+  Future<void> refresh() async {
+    await Future.delayed(const Duration(milliseconds: 700));
+    notifyListeners();
+  }
 }
