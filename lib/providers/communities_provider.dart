@@ -9,10 +9,12 @@ import '../services/storage_service.dart';
 ///
 /// Membership is "join/leave" only (no approval flow), persisted as a flat
 /// list of community ids — the same shape as [EventsProvider]'s RSVP ids.
+/// User-created communities go through the same approval flow as events
+/// (see [CommunityStatus]) and are kept in-memory alongside the seed list.
 class CommunitiesProvider extends ChangeNotifier {
   final StorageService _storage;
 
-  final List<Community> _communities = SeedData.communities;
+  List<Community> _communities = List.of(SeedData.communities);
   Set<String> _joinedIds = {};
   String _searchQuery = '';
 
@@ -24,19 +26,22 @@ class CommunitiesProvider extends ChangeNotifier {
 
   bool isJoined(String communityId) => _joinedIds.contains(communityId);
 
-  /// Communities matching the search query (by name or description).
+  /// Approved communities matching the search query (by name or description).
   List<Community> get communities {
     final query = _searchQuery.trim().toLowerCase();
-    if (query.isEmpty) return List.unmodifiable(_communities);
-    return _communities
+    final approved = _communities.where((c) => c.status == CommunityStatus.approved);
+    if (query.isEmpty) return List.unmodifiable(approved);
+    return approved
         .where((c) =>
             c.name.toLowerCase().contains(query) || c.description.toLowerCase().contains(query))
         .toList();
   }
 
-  /// Communities the current user has joined.
-  List<Community> get myCommunities =>
-      _communities.where((c) => _joinedIds.contains(c.id)).toList();
+  /// Communities the current user has joined, plus any communities they've
+  /// created that are still pending approval (so they can track status).
+  List<Community> myCommunities(String userId) => _communities
+      .where((c) => _joinedIds.contains(c.id) || c.posterId == userId)
+      .toList();
 
   void setSearchQuery(String query) {
     _searchQuery = query;
@@ -47,6 +52,15 @@ class CommunitiesProvider extends ChangeNotifier {
   /// current user is a member, so joining/leaving visibly changes the tile.
   int memberCountFor(Community community) {
     return community.memberCount + (_joinedIds.contains(community.id) ? 1 : 0);
+  }
+
+  /// Adds a user-created community and auto-joins its creator, regardless
+  /// of approval status, so they can track it on their "My communities" tab.
+  Future<void> addCommunity(Community community) async {
+    _communities = [..._communities, community];
+    _joinedIds = {..._joinedIds, community.id};
+    notifyListeners();
+    await _storage.saveJoinedCommunityIds(_joinedIds.toList());
   }
 
   Future<void> toggleJoin(String communityId) async {

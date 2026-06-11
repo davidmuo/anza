@@ -25,6 +25,14 @@ class ChatProvider extends ChangeNotifier {
     return filtered;
   }
 
+  /// Looks up a message by id — used to resolve reply previews.
+  Message? messageById(String id) {
+    for (final message in _messages) {
+      if (message.id == id) return message;
+    }
+    return null;
+  }
+
   bool hasReacted(String messageId, String emoji) =>
       _myReactions.contains('$messageId:$emoji');
 
@@ -60,6 +68,9 @@ class ChatProvider extends ChangeNotifier {
     required String senderId,
     required String senderName,
     required String text,
+    String? replyToId,
+    String? replyToSenderName,
+    String? replyToText,
   }) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
@@ -71,6 +82,9 @@ class ChatProvider extends ChangeNotifier {
       senderName: senderName,
       text: trimmed,
       timestamp: DateTime.now(),
+      replyToId: replyToId,
+      replyToSenderName: replyToSenderName,
+      replyToText: replyToText,
     ));
     notifyListeners();
   }

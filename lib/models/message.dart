@@ -13,6 +13,14 @@ class Message {
   /// Emoji reaction counts, e.g. {'👍': 3, '🎉': 1}.
   final Map<String, int> reactions;
 
+  /// Id of the message this one is replying to, if any.
+  final String? replyToId;
+
+  /// Denormalized snapshot of the replied-to message, so [ChatBubble] can
+  /// render the quote without looking it up.
+  final String? replyToSenderName;
+  final String? replyToText;
+
   const Message({
     required this.id,
     required this.spaceId,
@@ -21,6 +29,9 @@ class Message {
     required this.text,
     required this.timestamp,
     this.reactions = const {},
+    this.replyToId,
+    this.replyToSenderName,
+    this.replyToText,
   });
 
   Message copyWith({Map<String, int>? reactions}) => Message(
@@ -31,6 +42,9 @@ class Message {
         text: text,
         timestamp: timestamp,
         reactions: reactions ?? this.reactions,
+        replyToId: replyToId,
+        replyToSenderName: replyToSenderName,
+        replyToText: replyToText,
       );
 
   Map<String, dynamic> toJson() => {
@@ -41,6 +55,9 @@ class Message {
         'text': text,
         'timestamp': timestamp.toIso8601String(),
         'reactions': reactions,
+        'replyToId': replyToId,
+        'replyToSenderName': replyToSenderName,
+        'replyToText': replyToText,
       };
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -54,5 +71,8 @@ class Message {
               (k, v) => MapEntry(k as String, v as int),
             ) ??
             const {},
+        replyToId: json['replyToId'] as String?,
+        replyToSenderName: json['replyToSenderName'] as String?,
+        replyToText: json['replyToText'] as String?,
       );
 }

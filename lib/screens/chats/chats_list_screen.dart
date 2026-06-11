@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/community.dart';
 import '../../models/message.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -21,6 +22,7 @@ class _ChatSpace {
   final IconData icon;
   final Color color;
   final Message? lastMessage;
+  final Community? community;
 
   const _ChatSpace({
     required this.id,
@@ -28,6 +30,7 @@ class _ChatSpace {
     required this.icon,
     required this.color,
     required this.lastMessage,
+    this.community,
   });
 }
 
@@ -58,13 +61,14 @@ class ChatsListScreen extends StatelessWidget {
           color: event.imageColor,
           lastMessage: lastMessageFor(event.id),
         ),
-      for (final community in communitiesProvider.myCommunities)
+      for (final community in communitiesProvider.myCommunities(user.id))
         _ChatSpace(
           id: community.id,
           title: community.name,
           icon: community.icon,
           color: community.color,
           lastMessage: lastMessageFor(community.id),
+          community: community,
         ),
     ];
 
@@ -121,7 +125,11 @@ class ChatsListScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => ChatScreen(spaceId: space.id, title: space.title),
+                        builder: (_) => ChatScreen(
+                          spaceId: space.id,
+                          title: space.title,
+                          community: space.community,
+                        ),
                       ),
                     );
                   },

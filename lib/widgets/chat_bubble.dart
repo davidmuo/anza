@@ -10,17 +10,21 @@ import 'mini_avatar.dart';
 
 const _quickReactions = ['👍', '❤️', '🎉', '😂', '🔥', '🙌'];
 
+final _mentionPattern = RegExp(r'(@\w+)');
+
 class ChatBubble extends StatelessWidget {
   final Message message;
   final bool isOwnMessage;
+  final ValueChanged<Message> onReply;
 
   const ChatBubble({
     super.key,
     required this.message,
     required this.isOwnMessage,
+    required this.onReply,
   });
 
-  void _showReactionPicker(BuildContext context) {
+  void _showActionSheet(BuildContext context) {
     final chat = context.read<ChatProvider>();
     showModalBottomSheet<void>(
       context: context,
@@ -29,30 +33,65 @@ class ChatBubble extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Wrap(
-            spacing: 18,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: _quickReactions
-                .map(
-                  (emoji) => InkWell(
-                    borderRadius: BorderRadius.circular(24),
-                    onTap: () {
-                      chat.toggleReaction(message.id, emoji);
-                      Navigator.of(sheetContext).pop();
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(emoji, style: const TextStyle(fontSize: 28)),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.reply_rounded, color: AppColors.ink),
+              title: const Text('Reply'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                onReply(message);
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Wrap(
+                spacing: 18,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: _quickReactions
+                    .map(
+                      (emoji) => InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () {
+                          chat.toggleReaction(message.id, emoji);
+                          Navigator.of(sheetContext).pop();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  /// Renders [text] with `@mentions` highlighted in [mentionColor].
+  Widget _buildText(String text, Color baseColor, Color mentionColor) {
+    final spans = <TextSpan>[];
+    var cursor = 0;
+    for (final match in _mentionPattern.allMatches(text)) {
+      if (match.start > cursor) {
+        spans.add(TextSpan(text: text.substring(cursor, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(0),
+        style: TextStyle(color: mentionColor, fontWeight: FontWeight.w700),
+      ));
+      cursor = match.end;
+    }
+    if (cursor < text.length) {
+      spans.add(TextSpan(text: text.substring(cursor)));
+    }
+    return Text.rich(
+      TextSpan(style: AppTextStyles.body.copyWith(color: baseColor), children: spans),
     );
   }
 
@@ -66,8 +105,11 @@ class ChatBubble extends StatelessWidget {
 
     final chat = context.watch<ChatProvider>();
 
+    final textColor = isOwnMessage ? Colors.white : AppColors.ink;
+    final mentionColor = isOwnMessage ? Colors.white : AppColors.primary;
+
     final bubble = GestureDetector(
-      onLongPress: () => _showReactionPicker(context),
+      onLongPress: () => _showActionSheet(context),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 240),
         margin: const EdgeInsets.symmetric(vertical: 4),
@@ -96,12 +138,39 @@ class ChatBubble extends StatelessWidget {
                   ),
                 ),
               ),
-            Text(
-              message.text,
-              style: AppTextStyles.body.copyWith(
-                color: isOwnMessage ? Colors.white : AppColors.ink,
+            if (message.replyToText != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: textColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border(
+                    left: BorderSide(color: mentionColor, width: 3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message.replyToSenderName ?? '',
+                      style: AppTextStyles.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: mentionColor,
+                      ),
+                    ),
+                    Text(
+                      message.replyToText!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                        color: textColor.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            _buildText(message.text, textColor, mentionColor),
             const SizedBox(height: 4),
             Text(
               timeLabel,
@@ -132,7 +201,7 @@ class ChatBubble extends StatelessWidget {
             ),
         InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => _showReactionPicker(context),
+          onTap: () => _showActionSheet(context),
           child: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Icon(Icons.add_reaction_outlined, size: 16, color: AppColors.mutedText),
