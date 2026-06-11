@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
 
-import '../../providers/events_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../theme/app_theme.dart';
@@ -120,85 +118,6 @@ class _QrScanScreenState extends State<QrScanScreen> with WidgetsBindingObserver
     }
 
     setState(() => _statusMessage = "That doesn't look like an Anza code.");
-  }
-
-  Future<void> _enterCodeManually() async {
-    final controller = TextEditingController();
-    final code = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.lg,
-          AppSpacing.xl,
-          MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.xl,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Enter code', style: AppTextStyles.h1),
-            const SizedBox(height: 8),
-            Text(
-              "Type an event's check-in code or share code instead of "
-              'scanning its QR.',
-              style: AppTextStyles.bodyMuted,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              textCapitalization: TextCapitalization.characters,
-              style: AppTextStyles.h2.copyWith(letterSpacing: 6),
-              textAlign: TextAlign.center,
-              onSubmitted: (value) => Navigator.of(sheetContext).pop(value),
-              decoration: const InputDecoration(hintText: 'A1B2C3'),
-            ),
-            const SizedBox(height: 16),
-            PrimaryButton(
-              label: 'Continue',
-              onPressed: () => Navigator.of(sheetContext).pop(controller.text),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (code == null || code.trim().isEmpty || !mounted) return;
-    _handleCode(code);
-  }
-
-  void _handleCode(String code) {
-    final match = context.read<EventsProvider>().eventByCode(code);
-    if (match == null) {
-      setState(
-        () => _statusMessage = "We couldn't find an event with that code.",
-      );
-      return;
-    }
-
-    _handled = true;
-    if (match.isCheckInCode) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => CheckInScreen(
-            eventId: match.event.id,
-            scannedCode: match.event.checkInCode,
-          ),
-        ),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => EventDetailScreen(eventId: match.event.id),
-        ),
-      );
-    }
   }
 
   @override
@@ -331,22 +250,6 @@ class _QrScanScreenState extends State<QrScanScreen> with WidgetsBindingObserver
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: _enterCodeManually,
-                  icon: const Icon(Icons.keyboard_rounded, color: Colors.white),
-                  label: const Text(
-                    'Enter code instead',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                  ),
-                ),
               ],
             ),
           ),
