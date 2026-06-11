@@ -15,6 +15,12 @@ void main() {
     await tester.pumpWidget(AnzaApp(storageService: storageService));
     await tester.pumpAndSettle();
 
+    expect(find.text('ANZA'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Welcome to Anza'), findsOneWidget);
     expect(find.text('Get started'), findsOneWidget);
   });

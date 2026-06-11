@@ -43,6 +43,37 @@ class PassportProvider extends ChangeNotifier {
 
   PassportProvider(this._storage, this._eventsProvider) {
     _entries = _storage.loadPassportEntries();
+    if (_entries.isEmpty) {
+      _entries = _demoEntries();
+    }
+  }
+
+  /// Demo seed for the participation passport — five consecutive days of
+  /// check-ins across distinct categories (including a hackathon) so a
+  /// fresh install already shows an earned streak and badge set.
+  ///
+  /// Only used until the user's first real check-in; once
+  /// [_storage.loadPassportEntries] returns something, that takes over.
+  List<PassportEntry> _demoEntries() {
+    const seeds = [
+      ('e13', 'Personal Branding Workshop', EventCategory.workshop),
+      ('e12', 'Internship Speed-Networking', EventCategory.internship),
+      ('e9', 'Campus Startup Bootcamp', EventCategory.startup),
+      ('e11', 'Late-Night Hackathon: Campus Edition', EventCategory.hackathon),
+      ('e5', 'Leadership Lab: Speak With Confidence', EventCategory.leadership),
+    ];
+
+    return [
+      for (final (eventId, title, category) in seeds)
+        if (_eventsProvider.eventById(eventId) != null)
+          PassportEntry(
+            id: _uuid.v4(),
+            eventId: eventId,
+            eventTitle: title,
+            category: category,
+            checkedInAt: _eventsProvider.eventById(eventId)!.dateTime,
+          ),
+    ];
   }
 
   List<PassportEntry> get entries => List.unmodifiable(

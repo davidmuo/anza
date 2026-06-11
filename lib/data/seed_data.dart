@@ -72,6 +72,40 @@ class SeedData {
       interests: ['Event', 'Hackathon', 'Workshop'],
       avatarColor: Color(0xFF1E9E5A),
     ),
+    const AppUser(
+      id: 'u7',
+      name: 'Aisha Bello',
+      email: 'aisha.bello@alustudent.com',
+      role: UserRole.student,
+      interests: ['Internship', 'Event'],
+      avatarColor: Color(0xFFD96C8C),
+    ),
+    const AppUser(
+      id: 'u8',
+      name: 'Jean-Paul Habimana',
+      email: 'jeanpaul.habimana@alustudent.com',
+      role: UserRole.verified,
+      verifiedOrg: 'Career Services',
+      interests: ['Internship', 'Leadership'],
+      avatarColor: Color(0xFF3D7AE8),
+    ),
+    const AppUser(
+      id: 'u9',
+      name: 'Lindiwe Dube',
+      email: 'lindiwe.dube@alustudent.com',
+      role: UserRole.student,
+      interests: ['Workshop', 'Startup'],
+      avatarColor: Color(0xFF9C6B2F),
+    ),
+    const AppUser(
+      id: 'u10',
+      name: 'Marc Andrianjafy',
+      email: 'marc.andrianjafy@alustudent.com',
+      role: UserRole.verified,
+      verifiedOrg: 'Mauritius Tech Society',
+      interests: ['Hackathon', 'Workshop'],
+      avatarColor: Color(0xFF2FA89E),
+    ),
   ];
 
   // ---------------------------------------------------------------------
@@ -179,7 +213,7 @@ class SeedData {
         imageColor: AppColors.accentPalette[3],
         checkInCode: 'SPEAK5',
         rsvpUserIds: ['u3', 'u1'],
-        attendeeUserIds: const ['u3'],
+        attendeeUserIds: const ['u3', 'u1'],
       ),
       Event(
         id: 'e6',
@@ -276,6 +310,120 @@ class SeedData {
         rsvpUserIds: const [],
         attendeeUserIds: const [],
       ),
+      Event(
+        id: 'e11',
+        title: 'Late-Night Hackathon: Campus Edition',
+        description:
+            'A scrappy 6-hour evening hackathon — pick a prompt, form a team on the '
+            'spot, and ship something small but real. Pizza and energy drinks '
+            'included. Great low-pressure intro to the bigger hackathon.',
+        category: EventCategory.hackathon,
+        posterId: 'u2',
+        posterName: 'David Okafor',
+        posterVerifiedOrg: 'Robotics Club',
+        dateTime: at(-2, 19, 0),
+        location: 'Engineering Lab A',
+        campus: Campus.kigali,
+        imageColor: AppColors.accentPalette[2],
+        checkInCode: 'NIGHT11',
+        rsvpUserIds: ['u1', 'u6'],
+        attendeeUserIds: const ['u1', 'u6'],
+      ),
+      Event(
+        id: 'e12',
+        title: 'Internship Speed-Networking',
+        description:
+            'Meet recruiters from ten partner companies in fast five-minute '
+            'rounds. Bring printed copies of your CV — Career Services will have '
+            'a table set up for last-minute tweaks beforehand.',
+        category: EventCategory.internship,
+        posterId: 'u8',
+        posterName: 'Jean-Paul Habimana',
+        posterVerifiedOrg: 'Career Services',
+        dateTime: at(-4, 10, 0),
+        location: 'Auditorium B',
+        campus: Campus.mauritius,
+        imageColor: AppColors.accentPalette[1],
+        checkInCode: 'SPEED12',
+        rsvpUserIds: ['u1', 'u7'],
+        attendeeUserIds: const ['u1', 'u7'],
+      ),
+      Event(
+        id: 'e13',
+        title: 'Personal Branding Workshop',
+        description:
+            'Polish your LinkedIn, portfolio, and elevator pitch with guidance '
+            'from alumni mentors. Leave with a profile that actually represents '
+            'the work you have been doing.',
+        category: EventCategory.workshop,
+        posterId: 'u2',
+        posterName: 'David Okafor',
+        posterVerifiedOrg: 'Robotics Club',
+        dateTime: at(-5, 16, 0),
+        location: 'Design Studio',
+        campus: Campus.kigali,
+        imageColor: AppColors.accentPalette[4],
+        checkInCode: 'BRAND13',
+        rsvpUserIds: ['u1', 'u9'],
+        attendeeUserIds: const ['u1', 'u9'],
+      ),
+      Event(
+        id: 'e14',
+        title: 'Beach Cleanup & Sustainability Talk',
+        description:
+            'Help clear the shoreline near campus, then stick around for a short '
+            'talk on sustainable startups in the region. Gloves and bags '
+            'provided — just bring closed-toe shoes.',
+        category: EventCategory.event,
+        posterId: 'u10',
+        posterName: 'Marc Andrianjafy',
+        posterVerifiedOrg: 'Mauritius Tech Society',
+        dateTime: at(6, 9, 0),
+        location: 'Beau Plan Shoreline',
+        campus: Campus.mauritius,
+        imageColor: AppColors.accentPalette[5],
+        checkInCode: 'CLEAN14',
+        rsvpUserIds: ['u3'],
+        attendeeUserIds: const [],
+      ),
+      Event(
+        id: 'e15',
+        title: 'AI/ML Study Group Kickoff',
+        description:
+            'First session of a term-long study group working through applied '
+            'machine learning projects together. No prior ML experience needed — '
+            'just bring a laptop and curiosity.',
+        category: EventCategory.workshop,
+        posterId: 'u10',
+        posterName: 'Marc Andrianjafy',
+        posterVerifiedOrg: 'Mauritius Tech Society',
+        dateTime: at(8, 17, 0),
+        location: 'Engineering Lab B',
+        campus: Campus.kigali,
+        imageColor: AppColors.accentPalette[3],
+        checkInCode: 'AIML15',
+        rsvpUserIds: ['u6', 'u9'],
+        attendeeUserIds: const [],
+      ),
+      Event(
+        id: 'e16',
+        title: 'Pitch Competition Finals',
+        description:
+            'The five teams that made it through the bootcamp pitch live in '
+            'front of a panel of investors for a chance at seed funding. Open to '
+            'all as audience — come cheer your friends on.',
+        category: EventCategory.startup,
+        posterId: 'u5',
+        posterName: 'Fatima Yusuf',
+        posterVerifiedOrg: 'Founders Hub',
+        dateTime: at(10, 14, 0),
+        location: 'Innovation Hub, Main Hall',
+        campus: Campus.mauritius,
+        imageColor: AppColors.accentPalette[0],
+        checkInCode: 'FINAL16',
+        rsvpUserIds: ['u1', 'u9'],
+        attendeeUserIds: const [],
+      ),
     ];
   }
 
@@ -316,6 +464,22 @@ class SeedData {
       color: Color(0xFFE8A33D),
       memberCount: 64,
     ),
+    Community(
+      id: 'c5',
+      name: 'Career Services',
+      description: 'Internship listings, CV clinics, and career events.',
+      icon: Icons.work_outline_rounded,
+      color: Color(0xFF3D7AE8),
+      memberCount: 95,
+    ),
+    Community(
+      id: 'c6',
+      name: 'Mauritius Tech Society',
+      description: 'Tech meetups, study groups, and hackathons on the Mauritius campus.',
+      icon: Icons.devices_outlined,
+      color: Color(0xFF2FA89E),
+      memberCount: 53,
+    ),
   ];
 
   // ---------------------------------------------------------------------
@@ -351,6 +515,7 @@ class SeedData {
         senderName: 'David Okafor',
         text: 'Recalibrated the sensors last night, should be solid now. Bring your laptop if you can.',
         timestamp: ago(140),
+        reactions: const {'👍': 4, '🎉': 1},
       ),
 
       // Founders Hub community chat
@@ -361,6 +526,7 @@ class SeedData {
         senderName: 'Fatima Yusuf',
         text: 'Pitch night sign-ups close Friday at noon — get your slides in early so we can give feedback.',
         timestamp: ago(220),
+        reactions: const {'👍': 6},
       ),
       Message(
         id: 'm5',
@@ -369,6 +535,15 @@ class SeedData {
         senderName: 'Amara Chen',
         text: 'Just submitted mine! Nervous but excited 🚀',
         timestamp: ago(200),
+        reactions: const {'🚀': 3, '🔥': 2},
+      ),
+      Message(
+        id: 'm5b',
+        spaceId: 'c2',
+        senderId: 'u9',
+        senderName: 'Lindiwe Dube',
+        text: 'Good luck Amara! Saving you a front-row seat.',
+        timestamp: ago(190),
       ),
 
       // Academic Success Team community chat
@@ -379,6 +554,7 @@ class SeedData {
         senderName: 'Samuel Diallo',
         text: 'CV clinic slots are filling up fast — book yours this week if you want a review before applications open.',
         timestamp: ago(300),
+        reactions: const {'👍': 2},
       ),
       Message(
         id: 'm7',
@@ -387,6 +563,15 @@ class SeedData {
         senderName: 'Grace Mwangi',
         text: 'Booked mine for Tuesday. Does anyone have notes from last term\'s mock interviews?',
         timestamp: ago(260),
+      ),
+      Message(
+        id: 'm7b',
+        spaceId: 'c3',
+        senderId: 'u8',
+        senderName: 'Jean-Paul Habimana',
+        text: 'I\'ll drop a shared doc with common questions later today.',
+        timestamp: ago(245),
+        reactions: const {'🙏': 3},
       ),
 
       // Women in Tech community chat
@@ -397,6 +582,7 @@ class SeedData {
         senderName: 'Fatima Yusuf',
         text: 'Lightning talk speakers for the mixer are confirmed — three students and one alumna joining remotely.',
         timestamp: ago(90),
+        reactions: const {'🎉': 5},
       ),
       Message(
         id: 'm9',
@@ -405,6 +591,71 @@ class SeedData {
         senderName: 'Grace Mwangi',
         text: 'Can\'t wait! Is there a sign-up sheet for lightning talk slots still open?',
         timestamp: ago(70),
+      ),
+      Message(
+        id: 'm9b',
+        spaceId: 'c4',
+        senderId: 'u7',
+        senderName: 'Aisha Bello',
+        text: 'Yes, link is in the pinned post — last call for slots is Wednesday.',
+        timestamp: ago(60),
+        reactions: const {'👍': 1},
+      ),
+
+      // Career Services community chat
+      Message(
+        id: 'm12',
+        spaceId: 'c5',
+        senderId: 'u8',
+        senderName: 'Jean-Paul Habimana',
+        text: 'Speed-networking sign-up sheet is live — ten companies confirmed so far.',
+        timestamp: ago(310),
+        reactions: const {'🔥': 3},
+      ),
+      Message(
+        id: 'm13',
+        spaceId: 'c5',
+        senderId: 'u7',
+        senderName: 'Aisha Bello',
+        text: 'Is there a dress code for this one?',
+        timestamp: ago(295),
+      ),
+      Message(
+        id: 'm14',
+        spaceId: 'c5',
+        senderId: 'u8',
+        senderName: 'Jean-Paul Habimana',
+        text: 'Smart casual is fine — just no flip-flops 😄',
+        timestamp: ago(280),
+        reactions: const {'😂': 2},
+      ),
+
+      // Mauritius Tech Society community chat
+      Message(
+        id: 'm15',
+        spaceId: 'c6',
+        senderId: 'u10',
+        senderName: 'Marc Andrianjafy',
+        text: 'Beach cleanup sign-ups are open — meet at the shoreline gate at 8:45am.',
+        timestamp: ago(400),
+        reactions: const {'🌊': 2, '👍': 3},
+      ),
+      Message(
+        id: 'm16',
+        spaceId: 'c6',
+        senderId: 'u9',
+        senderName: 'Lindiwe Dube',
+        text: 'Count me in. Should we bring our own gloves or will some be provided?',
+        timestamp: ago(385),
+      ),
+      Message(
+        id: 'm17',
+        spaceId: 'c6',
+        senderId: 'u10',
+        senderName: 'Marc Andrianjafy',
+        text: 'Gloves and bags provided — just bring closed-toe shoes and sunscreen.',
+        timestamp: ago(370),
+        reactions: const {'👍': 4},
       ),
 
       // Event chat — Founders' Friday Pitch Night
@@ -423,6 +674,35 @@ class SeedData {
         senderName: 'Fatima Yusuf',
         text: 'Yes — up to two people per pitch. Just let me know your team size in advance.',
         timestamp: ago(40),
+        reactions: const {'👍': 2},
+      ),
+
+      // Event chat — Late-Night Hackathon: Campus Edition
+      Message(
+        id: 'm18',
+        spaceId: 'e11',
+        senderId: 'u2',
+        senderName: 'David Okafor',
+        text: 'Prompts will be revealed at 7pm sharp — come hungry, pizza arrives at 8.',
+        timestamp: ago(130),
+        reactions: const {'🍕': 4, '🔥': 2},
+      ),
+      Message(
+        id: 'm19',
+        spaceId: 'e11',
+        senderId: 'u6',
+        senderName: 'Brian Tumusiime',
+        text: 'Looking for one more teammate who knows Firebase — anyone free?',
+        timestamp: ago(115),
+      ),
+      Message(
+        id: 'm20',
+        spaceId: 'e11',
+        senderId: 'u1',
+        senderName: 'Amara Chen',
+        text: 'I can help with that, count me in!',
+        timestamp: ago(110),
+        reactions: const {'🙌': 1},
       ),
     ];
   }
